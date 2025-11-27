@@ -12,6 +12,12 @@ interface TasksColumnProps {
     onAddColumn: () => void;
     boardShortName?: string;
     onTaskDrop: (taskId: string, targetColumnId: string) => void; // dnd
+    onTaskDelete: (taskId: string) => void;
+    onTaskEdit: (taskId: string) => void;
+    OnTaskDetails: (task: TaskType) => void;
+    onDeleteColumn: (column: Column) => void;
+    onChecklistChange: (task: TaskType) => void;
+    onTagClick: (tag: string) => void;
 }
 
 
@@ -22,9 +28,38 @@ export const TasksColumn = ({
     onTaskColumn,
     onAddColumn,
     onTaskDrop, // dnd
+    OnTaskDetails,
+    onChecklistChange,
+    onDeleteColumn,
+    onTagClick,
+    onTaskDelete,
+    onTaskEdit
 }: TasksColumnProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
+
+    const [taskMenuTaskId, setTaskMenuTaskId] = useState<string | null>(null);
+    const taskMenuRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+            if (taskMenuRef.current && !taskMenuRef.current.contains(event.target as Node)) {
+                setTaskMenuTaskId(null);
+            }
+        };
+
+        if (isMenuOpen || taskMenuTaskId) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isMenuOpen, taskMenuTaskId]);
+
 
     // предотвращаем выпадение меню
     useEffect(() => {
@@ -53,6 +88,12 @@ export const TasksColumn = ({
         setIsMenuOpen(false);
     };
 
+    const handleDeleteColumn = () => {
+        onDeleteColumn(column);
+        setIsMenuOpen(false);
+    };
+
+
     // dnd: разрешаем drop на всю колонку
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -63,6 +104,10 @@ export const TasksColumn = ({
         const taskId = e.dataTransfer.getData("text/plain");
         if (!taskId) return;
         onTaskDrop(taskId, column.id);
+    };
+
+    const handleSettings = () => {
+        console.log("settings");
     };
 
     return (
@@ -91,12 +136,13 @@ export const TasksColumn = ({
                             >
                                 Создать колонку
                             </button>
-                            {/* <button 
-                className="column-menu-item"
-                onClick={() => handleAddColumn('right')}
-              >
-                Создать колонку справай
-              </button> */}
+                            <button
+                                className="column-menu-item"
+                                onClick={() => handleDeleteColumn()}
+                                style={{ color: "red" }}
+                            >
+                                Удалить колонку
+                            </button>
                         </div>
                     )}
                 </div>
@@ -105,14 +151,52 @@ export const TasksColumn = ({
                 {tasks.map(task => (
                     <div
                         key={task.id}
+                        className="task-wrapper"
                         draggable
-                        onDragStart={e => {
-                            e.dataTransfer.setData("text/plain", task.id); // dnd
+                        onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", task.id);
                         }}
                     >
-                        <Task task={task} boardShortName={boardShortName} />
+                        <Task
+                            task={task}
+                            boardShortName={boardShortName}
+                            OnTaskDetails={OnTaskDetails}
+                            OnChecklistChange={onChecklistChange}
+                            onTagClick={onTagClick}
+                            onSettingsClick={() => {
+                                setTaskMenuTaskId(prev => prev === task.id ? null : task.id);
+                            }}
+                        />
+
+                        {taskMenuTaskId === task.id && (
+                            <div className="task-dropdown-menu" ref={taskMenuRef}>
+                                <button
+                                    type="button"
+                                    className="task-menu-item"
+                                    onClick={() => {
+                                        onTaskEdit(task.id);
+                                        setTaskMenuTaskId(null);
+                                    }}
+                                >
+                                    Редактировать
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="task-menu-item task-menu-item--danger"
+                                    onClick={() => {
+                                        onTaskDelete(task.id);
+                                        setTaskMenuTaskId(null);
+                                    }}
+                                >
+                                    Удалить задачу
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
+
+
             </div>
         </div>
     );

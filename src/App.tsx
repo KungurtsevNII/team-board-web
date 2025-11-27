@@ -6,14 +6,14 @@ import { AuthField } from './pages/AuthField/AuthField';
 
 function App() {
 
-  const isAuthenticated = true
+  const isAuthenticated = false 
   return (
     //TODO: Настроить роутинг
     <Router>
        <Routes>
         <Route
           path="/main"
-          element={isAuthenticated ? <MainField/> : <Navigate to="/auth"/>}
+          element={ <MainField/>}
         />
         <Route
           path="/auth"

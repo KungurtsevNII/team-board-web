@@ -1,51 +1,30 @@
 import "./Task.css"
 // import plus from "/src/assets/plus.png"
 import arrow from "/src/assets/arrow.png"
+import dots from "/src/assets/dots.png"
 import type { Task as TaskType } from "../../types/task";
 import type { Checklist } from "../../types/checklist";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 interface TaskProps{
     task: TaskType;
     boardShortName? : string;
+    OnTaskDetails : (task: TaskType) => void;
+    OnChecklistChange : (task: TaskType) => void;
+    onTagClick: (tag: string) => void;
+    onSettingsClick: () => void;
 }
 
-export const Task = ({task, boardShortName} : TaskProps) => {
+export const Task = ({task, boardShortName, OnTaskDetails, OnChecklistChange, onTagClick, onSettingsClick} : TaskProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [checklistsValues, onChangeChecklistsValues] = useState<Checklist[] | undefined>(task.checklists);
-    
-    const name = "TBback"
-    const num = 3
-    const title = "Описать структуру бд"
-    const description = "Сделать структуру бд для проекта"
-    const tags = ["db", "structure"]
-    const checklists : Checklist[] = [
-        {
-            title: "Сделать структуру бд",
-            items: [
-                {
-                    title: "Описать user",
-                    completed: false
-                },
-                {
-                    title: "Описать product",
-                    completed: true
-                }
-            ]
-        },
-        {
-            title: "Сделать структуру бд",
-            items: [
-                {
-                    title: "Сделать структуру бд",
-                    completed: false
-                }
-            ]
-        }
-    ]
+
+    useEffect(() => {
+        onChangeChecklistsValues(task.checklists)
+    },[task])
 
     const handleToggle = () => {
         setIsExpanded(!isExpanded);
+        OnTaskDetails(task);
     };
 
     const handleChecklistChange = (
@@ -68,6 +47,8 @@ export const Task = ({task, boardShortName} : TaskProps) => {
         });
         
         onChangeChecklistsValues(updatedChecklists);
+        task.checklists = updatedChecklists 
+        OnChecklistChange(task);
     }
 
     return(
@@ -86,6 +67,13 @@ export const Task = ({task, boardShortName} : TaskProps) => {
                 onClick={handleToggle}
             />
 
+            <img 
+                className="dots-icon"
+                src={dots} 
+                alt="Toggle task details"
+                onClick={onSettingsClick}
+            />
+
             <div className={`task__details ${isExpanded ? 'task__details--expanded' : ''}`}>
                 <div className="task__details-content">
                     <div className="task__content">
@@ -95,7 +83,7 @@ export const Task = ({task, boardShortName} : TaskProps) => {
                         
                         <div className="task__tags">
                             {task.tags?.map((tag, index) => (
-                                <span key={index} className="tag">#{tag} </span>
+                                <span key={index} className="tag" onClick={() => onTagClick(tag)}>#{tag} </span>
                             ))}
                         </div>
                     </div>

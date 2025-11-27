@@ -1,4 +1,4 @@
-.task-container{
+.task-container {
     background-color: var(--color-main-blue);
     border: 3px solid black;
     border-radius: 10px;
@@ -8,63 +8,65 @@
     position: relative;
 }
 
-.task__header{
+.task__header {
     color: #565656;
     margin-left: 10px;
     margin-top: 10px;
     margin-bottom: 0px;
 }
 
-.task__header-text{
-    font-size: 14px;;
+.task__header-text {
+    font-size: 14px;
+    ;
 }
 
-.task__title, h3{
+.task__title,
+h3 {
     margin-left: 5px;
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
-.task__description{
+.task__description {
 
     margin-bottom: 20px;
 }
 
 .arrow-icon {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  right: 10px;
-  top: 10px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  transform: rotate(0deg);
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    transform: rotate(0deg);
 }
 
 
 .arrow-icon--active {
-  transform: rotate(90deg);
+    transform: rotate(90deg);
 }
 
-.task__content{
-    margin-left : 5px
+.task__content {
+    margin-left: 5px
 }
 
-.task__tags{
+.task__tags {
     margin: 20px 5px 2px 5px;
     color: var(--color-blue-purpe)
 }
 
-.tag{
+.tag {
     cursor: pointer;
 }
 
-.tag:hover{
+.tag:hover {
     text-decoration: underline;
 }
 
 .checklist {
-  margin-top: 8px;
+    margin-top: 8px;
 }
 
 .checklist h4 {
@@ -81,12 +83,12 @@
 }
 
 .checklist-item input[type="checkbox"] {
-  cursor: pointer;
-  width: 20px;
-  height: 20px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
 }
 
-.task__checklists{
+.task__checklists {
     margin: 10px 20px;
 }
 
@@ -102,3 +104,13 @@
     opacity: 1;
 }
 
+.dots-icon {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    right: 40px;
+    top: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    transform: rotate(0deg);
+}

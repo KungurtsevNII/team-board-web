@@ -2,19 +2,22 @@ import { useState } from "react"
 import "./AuthField.css"
 import iconEye from "/src/assets/eye.png"
 import iconHidden from "/src/assets/hidden.png"
+import { useNavigate } from "react-router-dom"
 
 /**
  * AuthField component that handles both login and registration forms
  * It toggles between login and registration views based on user preference
  */
 export const AuthField = () => {
-    const [isLogin, setIsLogin] = useState(false)
+    const [isLogin, setIsLogin] = useState(true)
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [passType, setPassType] = useState('password');
 
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+
+    const navigate = useNavigate();
     
     const handlePasswordVisibility = (
         passVisible: boolean = isPasswordVisible, 
@@ -34,9 +37,12 @@ export const AuthField = () => {
     }
 
     const OnSubmitLogin = (e: React.FormEvent<HTMLFormElement>) => {
-        //TODO: доделать вход
-        alert('Вход')
         e.preventDefault()
+        if (email.trim() == 'admin@admin' && password.trim() == 'admin') {
+            //todo: route to /main
+        }
+        navigate('/main');
+        
     }
 
     const OnSubmitRegister = (e: React.FormEvent<HTMLFormElement>) => {

@@ -4,9 +4,18 @@ import type { Column } from "./column";
 
 export interface Task {
     id: string;
-    board: Board;
-    column: Column
+    boardID: string;
+    columnID: string
     number: number;
+    title: string;
+    description?: string;
+    tags?: string[];
+    checklists?: Checklist[];
+}
+
+export interface TaskRequest{
+    columnID: string;
+    boardID: string;
     title: string;
     description?: string;
     tags?: string[];

@@ -50,7 +50,7 @@ button {
   border-radius: 10px;
   border: #1a1a1a 3px solid;
   color: black;
-  height: 35px;
+  min-height: 35px;
   font-size: 20px;
   font-family: inherit;
   background-color: white;
