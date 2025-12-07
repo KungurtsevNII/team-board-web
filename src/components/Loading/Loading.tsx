@@ -12,7 +12,7 @@ export const Loading = ( {color,size}: LoadingProps) => {
     if (!size) {
         size = 100
     }
-    var colorPath : string
+    let colorPath : string
     switch (color) {
         case "white":
             colorPath = whiteLogoIcon

@@ -1,14 +1,15 @@
 import { useEffect, useRef } from "react";
-import "./Modal.css";
+import "./ErrorModal.css";
 
-interface ModalProps {
+interface ErrorModalProps {
+    text: string | null;
     isOpen: boolean;
     onClose: () => void;
 }
 
-export const Modal = ({ isOpen, onClose }: ModalProps) => {
+export const ErrorModal = ({ text, isOpen, onClose }: ErrorModalProps) => {
     const modalRef = useRef<HTMLDivElement>(null);
-
+    if (!text) text = "Произошла ошибка!"
     // Закрытие при нажатии Escape
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -21,7 +22,6 @@ export const Modal = ({ isOpen, onClose }: ModalProps) => {
         return () => document.removeEventListener("keydown", handleEscape);
     }, [isOpen, onClose]);
 
-    // Блокировка скролла body при открытом модале
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
@@ -44,13 +44,14 @@ export const Modal = ({ isOpen, onClose }: ModalProps) => {
     if (!isOpen) return null;
 
     return (
-        <div className="modal-backdrop" onClick={handleBackdropClick}>
-            <div className="modal-content" ref={modalRef}>
-                {/* <div className="modal-header">
-                    <img className="modal-icon"src={iconPath} alt="alt"/>
-                        <h2 className="modal-title">Произошла ошибка</h2>
+        <div className="err-modal-backdrop" onClick={handleBackdropClick}>
+            <div className="err-modal-content" ref={modalRef}>
+                <div className="err-modal-header">
+                        <h2 className="err-modal-title">Произошла ошибка!</h2>
                 </div>
-                <div className="modal-body">{children}</div> */}
+                <div className="err-modal-body">
+                    {text}
+                </div>
             </div>
         </div>
     );

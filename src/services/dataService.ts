@@ -1,6 +1,6 @@
-import type { Board, BoardRequest } from "../types/board";
-import type { Column, ColumnRequest } from "../types/column";
-import type { Task, TaskRequest } from "../types/task";
+import type {
+  Board, BoardRequest, Column, ColumnRequest, SearchTasksRequest, Task, TaskRequest
+} from "../types/types"
 
 // Интерфейс для сервиса данных
 export interface IDataService {
@@ -12,226 +12,259 @@ export interface IDataService {
   getTask(taskId: string): Promise<Task>;
   moveTask(taskId: string, columnID: string): Promise<Task>;
   updateTask(task: Task): Promise<Task>;
+  deleteTask(taskId: string): Promise<void>;
+  deleteColumn(columnId: string): Promise<void>;
+  deleteBoard(boardId: string): Promise<void>;
+  searchTasks(searchTaskReq: SearchTasksRequest): Promise<Task[]>;
 }
-
-// Сервис с моками (для разработки)
-export class MockDataService implements IDataService {
-  private mockBoard: Board = {
-    id: "board-1",
-    name: "My Kanban Board",
-    shortName: "MKB1",
-  };
-
-  private mockBoard2: Board = {
-    id: "board-2",
-    name: "Board 2 name",
-    shortName: "B2N",
-  };
-
-  private mockBoard3: Board = {
-    id: "board-3",
-    name: "IT Board",
-    shortName: "ITB",
-  };
-
-
-  private mockColumns: Column[] = [
-    {
-      id: "column-1",
-      boardID: this.mockBoard.id,
-      orderNum: 1,
-      name: "To Do"
-    },
-    {
-      id: "column-2",
-      boardID: this.mockBoard.id,
-      orderNum: 2,
-      name: "In Progress"
-    },
-    {
-      id: "column-3",
-      boardID: this.mockBoard.id,
-      orderNum: 3,
-      name: "Done"
-    }
-  ];
-
-  private mockTasks: Task[] = [
-    {
-      id: "task-1",
-      boardID: this.mockBoard.id,
-      columnID: this.mockColumns[0].id,
-      number: 1,
-      title: "Design new landing page",
-      description: "Create mockups",
-      tags: ["design", "ui/ux"]
-    },
-    {
-      id: "task-2",
-      boardID: this.mockBoard.id,
-      columnID: this.mockColumns[0].id,
-      number: 2,
-      title: "Write API documentation",
-      tags: ["documentation"],
-      checklists: [
-        {
-          title: "Описать сваггер",
-          items: [
-            {
-              title: "Круды для board",
-              completed: false
-            },
-            {
-              title: "Круды для task",
-              completed: true
-            }
-          ]
-        },
-        {
-          title: "Swagger в makefile",
-          items: [
-            {
-              title: "Описать комады",
-              completed: false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      id: "task-4",
-      boardID: this.mockBoard.id,
-      columnID: this.mockColumns[1].id,
-      number: 4,
-      title: "Implement authentication",
-      tags: ["backend"]
-    }
-  ];
-
-  async createColumn(boaidID: string, column: ColumnRequest): Promise<Column> {
-    return this.mockColumns[0];
-  }
-
-  async createTask(task: TaskRequest): Promise<Task> {
-    return this.mockTasks[0];
-  }
-
-  async createBoard(board: BoardRequest): Promise<Board> {
-    return this.mockBoard;
-  }
-
-  async getBoard(boardId: string): Promise<Board> {
-    // Имитируем задержку сети
-    // const data = fs.readFileSync('data.json', 'utf8')
-    await new Promise(resolve => setTimeout(resolve, 300));
-    this.mockBoard.columns = this.mockColumns.filter(column => column.boardID === boardId);
-    // this.mockBoard.tasks = this.mockTasks.filter(task => task.column.id === columnId);
-    this.mockBoard.tasks = this.mockTasks;
-    return this.mockBoard;
-  }
-
-  async getBoards(): Promise<Board[]> {
-    // Имитируем задержку сети
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return [this.mockBoard, this.mockBoard2, this.mockBoard3];
-  }
-
-  async moveTask(taskId: string, columnID: string): Promise<Task> {
-    return this.mockTasks[0]
-  }
-
-  async getTask(taskID: string): Promise<Task> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockTasks[0];
-  }
-
-  async updateTask(task: Task): Promise<Task> {
-    return task;
-  }
-}
+//TODO возвращать нормальные ошибки тут (на вывод фронт)
 
 // Сервис с реальным API
 export class ApiDataService implements IDataService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = "http://localhost:8080/api/v1") {
+  constructor(baseUrl: string) {
+    if (baseUrl == "") {
+      throw new Error("baseUrl is required")
+    }
     this.baseUrl = baseUrl;
   }
 
-  async createColumn(boaidID: string, column: ColumnRequest): Promise<Column> {
-    const response = await fetch(`${this.baseUrl}/boards/${boaidID}/columns`, {
+  async createColumn(boardID: string, columnData: ColumnRequest): Promise<Column> {
+    const response = await fetch(`${this.baseUrl}/boards/${boardID}/columns`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-ID': '123e4567-e89b-12d3-a456-426655440000',
       },
-      body: JSON.stringify(column)
-    })
+      body: JSON.stringify({
+        name: columnData.name,
+      }),
+    });
+
     if (!response.ok) {
-      throw new Error("Failed to fetch board");
+      throw new Error("Failed to create column");
     }
-    return response.json();
+
+    const data = await response.json();
+
+    const column: Column = {
+      id: data.id,
+      boardID: data.board_id,
+      orderNum: data.order_num,
+      name: data.name,
+    };
+
+    return column;
   }
 
   async createTask(task: TaskRequest): Promise<Task> {
     const response = await fetch(`${this.baseUrl}/tasks`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-ID': '123e4567-e89b-12d3-a456-426655440000',
       },
-      body: JSON.stringify(task)
-    })
+      body: JSON.stringify({
+        column_id: task.columnID,
+        board_id: task.boardID,
+        title: task.title,
+        description: task.description,
+        tags: task.tags,
+        checklists: task.checklists?.map((checklist) => ({
+          title: checklist.title,
+          items: checklist.items?.map((item) => ({
+            title: item.title,
+            completed: item.completed,
+          })) || [],
+        })) || undefined,
+      }),
+    });
 
-    return response.json();
+    if (!response.ok) {
+      throw new Error("Failed to create task");
+    }
+
+    const data = await response.json();
+
+    const newTask: Task = {
+      id: data.id,
+      boardID: data.board_id,
+      columnID: data.column_id,
+      number: data.number,
+      title: data.title,
+      description: data.description,
+      tags: data.tags,
+      checklists: data.checklists?.map((checklist: any) => ({
+        title: checklist.title,
+        items: checklist.items?.map((item: any) => ({
+          title: item.title,
+          completed: item.completed,
+        })) || [],
+      })) || [],
+    };
+
+    return newTask;
   }
+
 
   async createBoard(board: BoardRequest): Promise<Board> {
     const response = await fetch(`${this.baseUrl}/boards`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(board)
-    })
+      body: JSON.stringify({
+        name: board.name,
+        short_name: board.shortName,
+      }),
+    });
 
-    return response.json();
+    if (!response.ok) {
+      throw new Error("Failed to create board");
+    }
+
+    const data = await response.json();
+
+    const newBoard: Board = {
+      id: data.id,
+      name: data.name,
+      shortName: data.short_name,
+      columns: data.columns?.map((col: any) => ({
+        id: col.id,
+        boardID: col.board_id,
+        orderNum: col.order_num,
+        name: col.name,
+      })) || [],
+      tasks: data.tasks?.map((task: any) => ({
+        id: task.id,
+        boardID: task.board_id,
+        columnID: task.column_id,
+        number: task.number,
+        title: task.title,
+        description: task.description,
+        tags: task.tags,
+        checklists: task.checklists?.map((checklist: any) => ({
+          title: checklist.title,
+          items: checklist.items?.map((item: any) => ({
+            title: item.title,
+            completed: item.completed,
+          })) || [],
+        })) || [],
+      })) || [],
+    };
+
+    return newBoard;
   }
 
-
   async getBoard(boardId: string): Promise<Board> {
-    const response = await fetch(`${this.baseUrl}/boards/${boardId}`);
+    const response = await fetch(`${this.baseUrl}/boards/${boardId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-ID': '123e4567-e89b-12d3-a456-426655440000',
+      },
+    });
     if (!response.ok) {
       throw new Error("Failed to fetch board");
     }
-    return response.json();
+
+    let data = await response.json();
+    data = data.data
+
+    const board: Board = {
+      id: data.id,
+      name: data.name,
+      shortName: data.short_name,
+      columns: data.columns?.map((col: any) => ({
+        id: col.id,
+        boardID: col.board_id,
+        orderNum: col.order_num,
+        name: col.name,
+      })) || [],
+      tasks: data.tasks?.map((task: any) => ({
+        id: task.id,
+        boardID: task.board_id,
+        columnID: task.column_id,
+        number: task.number,
+        title: task.title,
+        description: task.description,
+        tags: task.tags,
+        checklists: task.checklists?.map((checklist: any) => ({
+          title: checklist.title,
+          items: checklist.items?.map((item: any) => ({
+            title: item.title,
+            completed: item.completed,
+          })) || [],
+        })) || [],
+      })) || [],
+    };
+
+    return board;
   }
 
-  async getBoards(): Promise<Board[]> {
-    // Имитируем задержку сети
-    // const response = await fetch(`${this.baseUrl}/boards`);
-    // if (!response.ok) {
-    //   throw new Error("Failed to fetch boards");
-    // }
 
-    console.log("DADAD")
+  async getBoards(): Promise<Board[]> {
     const response = await fetch(`${this.baseUrl}/boards`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-ID': "123e4567-e89b-12d3-a456-426655440000"
       },
-      body: JSON.stringify({user_id: "48034ba8-bd52-435e-8b77-1d3c5c0c01c5"})
     })
-    return response.json();
+    if (!response.ok) {
+      throw new Error("Failed to fetch board");
+    }
+    const rawBoards = await response.json();
+    const boards: Board[] = rawBoards.boards.map((board: any) => ({
+      id: board.id,
+      name: board.name,
+      shortName: board.short_name,
+      columns: [],
+      tasks: [],
+    }));
+
+    return boards;
   }
 
   async getTask(taskID: string): Promise<Task> {
-    const response = await fetch(`${this.baseUrl}/tasks/${taskID}`);
+    const response = await fetch(`${this.baseUrl}/tasks/${taskID}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-ID': '123e4567-e89b-12d3-a456-426655440000',
+      },
+    });
+
     if (!response.ok) {
-      throw new Error("Failed to fetch tasks");
+      throw new Error("Failed to fetch task");
     }
-    return response.json();
+
+    const data = await response.json();
+
+    const task: Task = {
+      id: data.id,
+      boardID: data.board_id,
+      columnID: data.column_id,
+      number: data.number,
+      title: data.title,
+      description: data.description,
+      tags: data.tags,
+      checklists: data.checklists?.map((checklist: any) => ({
+        title: checklist.title,
+        items: checklist.items?.map((item: any) => ({
+          title: item.title,
+          completed: item.completed,
+        })) || [],
+      })) || [],
+    };
+
+    return task;
   }
 
+
   async moveTask(taskId: string, columnID: string): Promise<Task> {
+    throw Error("not implemented");
     const response = await fetch(`${this.baseUrl}/tasks/${taskId}/move`, {
       method: 'POST',
       headers: {
@@ -246,6 +279,7 @@ export class ApiDataService implements IDataService {
     return response.json();
   }
   async updateTask(task: Task): Promise<Task> {
+    throw Error("not implemented");
     const response = await fetch(`${this.baseUrl}/tasks/${task.id}`, {
       method: 'PUT',
       headers: {
@@ -260,15 +294,75 @@ export class ApiDataService implements IDataService {
     return response.json();
   }
 
+
+  async deleteTask(taskId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error("Failed to delete task");
+    }
+  }
+
+  async deleteColumn(columnId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/columns/${columnId}`, {
+      method: 'DELETE',
+    })
+
+    if (response.status === 409) {
+      throw new Error("Not empty");
+    }
+    if (!response.ok) {
+      throw new Error("Failed to delete column");
+    }
+
+  }
+
+  async deleteBoard(boardId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/boards/${boardId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error("Failed to delete task");
+    }
+  }
+
+  async searchTasks(searchTaskReq: SearchTasksRequest): Promise<Task[]> {
+    const response = await fetch(`${this.baseUrl}/tasks/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(searchTaskReq)
+    })
+    if (!response.ok) {
+      throw new Error("Failed to search tasks");
+    }
+
+    const resp = await response.json();
+    const tasks: Task[] = resp.map(
+      (task: any) => ({
+        id: task.id,
+        boardID: task.board_id,
+        columnID: task.column_id,
+        number: task.number,
+        title: task.title,
+      })
+    )
+    return tasks
+  }
 }
 
 
 
-
+// Тестовый сервер
 export class ApiTestDataService implements IDataService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = "http://localhost:8079/api/v1") {
+  constructor(baseUrl: string) {
+    if (baseUrl == "") {
+      throw new Error("baseUrl is required")
+    }
     this.baseUrl = baseUrl;
   }
 
@@ -294,6 +388,9 @@ export class ApiTestDataService implements IDataService {
       },
       body: JSON.stringify(task)
     })
+    if (!response.ok) {
+      throw new Error("Failed to fetch board");
+    }
 
     return response.json();
   }
@@ -306,6 +403,9 @@ export class ApiTestDataService implements IDataService {
       },
       body: JSON.stringify(board)
     })
+    if (!response.ok) {
+      throw new Error("Failed to fetch board");
+    }
 
     return response.json();
   }
@@ -317,6 +417,7 @@ export class ApiTestDataService implements IDataService {
       throw new Error("Failed to fetch board");
     }
     const resp: Board = await response.json()
+    console.log(resp)
     return resp;
   }
 
@@ -365,9 +466,59 @@ export class ApiTestDataService implements IDataService {
     })
 
     if (!response.ok) {
-      throw new Error("Failed to move tasks");
+      throw new Error("Failed to update tasks");
     }
     return response.json();
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error("Failed to delete task");
+    }
+  }
+
+  async deleteColumn(columnId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/columns/${columnId}`, {
+      method: 'DELETE',
+    })
+    let resp
+    try {
+      resp = await response.json()
+    } catch { }
+
+    if (resp?.error === "column is not empty") {
+      throw new Error("Not empty");
+    }
+    if (!response.ok) {
+      throw new Error("Failed to delete column");
+    }
+
+  }
+
+  async deleteBoard(boardId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/boards/${boardId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error("Failed to delete task");
+    }
+  }
+
+  async searchTasks(searchTaskReq: SearchTasksRequest): Promise<Task[]> {
+    const response = await fetch(`${this.baseUrl}/tasks/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(searchTaskReq)
+    })
+    if (!response.ok) {
+      throw new Error("Failed to search tasks");
+    }
+    return response.json()
   }
 }
 
@@ -376,8 +527,8 @@ export const createDataService = (): IDataService => {
   const useMocks = import.meta.env.VITE_USE_MOCKS === "true"
 
   if (useMocks) {
-    console.log("Using mock data service");
-    return new ApiTestDataService();
+    console.log("Using mock data service ", import.meta.env.VITE_API_TEST_URL);
+    return new ApiTestDataService(import.meta.env.VITE_API_TEST_URL);
   } else {
     console.log("Using API data service");
     return new ApiDataService(import.meta.env.VITE_API_URL);

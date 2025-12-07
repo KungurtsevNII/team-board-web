@@ -1,22 +1,19 @@
 import { Task } from "../Task/Task"
 import "./TasksColumn.css"
 import plus from "/src/assets/plus.png"
-import type { Task as TaskType } from "../../types/task";
-import type { Column } from "../../types/column";
-import { useState, useRef, useEffect } from "react";
+import type { 
+    Column, Task as TaskType
+} from "../../types/types"
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useTaskContext } from "../../utils/TaskProvider";
+import { useBoardContext } from "../../utils/BoardProvider";
 
 interface TasksColumnProps {
     column: Column;
     tasks: TaskType[];
-    onTaskColumn: (column: Column) => void;
+    onAddTask: () => void;
     onAddColumn: () => void;
-    boardShortName?: string;
     onTaskDrop: (taskId: string, targetColumnId: string) => void; // dnd
-    onTaskDelete: (taskId: string) => void;
-    onTaskEdit: (taskId: string) => void;
-    OnTaskDetails: (task: TaskType) => void;
-    onDeleteColumn: (column: Column) => void;
-    onChecklistChange: (task: TaskType) => void;
     onTagClick: (tag: string) => void;
 }
 
@@ -24,22 +21,19 @@ interface TasksColumnProps {
 export const TasksColumn = ({
     column,
     tasks,
-    boardShortName,
-    onTaskColumn,
+    onAddTask,
     onAddColumn,
-    onTaskDrop, // dnd
-    OnTaskDetails,
-    onChecklistChange,
-    onDeleteColumn,
+    onTaskDrop,
     onTagClick,
-    onTaskDelete,
-    onTaskEdit
 }: TasksColumnProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
 
     const [taskMenuTaskId, setTaskMenuTaskId] = useState<string | null>(null);
     const taskMenuRef = useRef<HTMLDivElement | null>(null);
+
+    const taskCtx = useTaskContext();
+    const boardCtx = useBoardContext();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -78,37 +72,38 @@ export const TasksColumn = ({
         };
     }, [isMenuOpen]);
 
-    const handleAddTask = () => {
-        onTaskColumn(column);
+    const handleAddTask = useCallback(() => {
+        // onTaskColumn(column);
+        onAddTask()
         setIsMenuOpen(false);
-    };
+    }, []);
 
-    const handleAddColumn = () => {
+    const handleAddColumn = useCallback(() => {
+        // boardCtx.setIsAddColumnProcess(true)
         onAddColumn();
         setIsMenuOpen(false);
-    };
+    }, []);
 
-    const handleDeleteColumn = () => {
-        onDeleteColumn(column);
-        setIsMenuOpen(false);
-    };
+    const handleDeleteColumn = useCallback(() => {
+        boardCtx.deleteColumn(column.id);
+    }, []);
+
+    const handleDeleteTask = useCallback((taskId: string) => {
+        taskCtx.deleteTask(taskId);
+    }, [taskCtx]);
 
 
     // dnd: разрешаем drop на всю колонку
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-    };
+    }, []);
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const taskId = e.dataTransfer.getData("text/plain");
         if (!taskId) return;
         onTaskDrop(taskId, column.id);
-    };
-
-    const handleSettings = () => {
-        console.log("settings");
-    };
+    }, [onTaskDrop]);
 
     return (
         <div className="tasks-column" onDragOver={handleDragOver} // dnd
@@ -132,13 +127,13 @@ export const TasksColumn = ({
                             </button>
                             <button
                                 className="column-menu-item"
-                                onClick={() => handleAddColumn()}
+                                onClick={handleAddColumn}
                             >
                                 Создать колонку
                             </button>
                             <button
                                 className="column-menu-item"
-                                onClick={() => handleDeleteColumn()}
+                                onClick={handleDeleteColumn}
                                 style={{ color: "red" }}
                             >
                                 Удалить колонку
@@ -159,9 +154,6 @@ export const TasksColumn = ({
                     >
                         <Task
                             task={task}
-                            boardShortName={boardShortName}
-                            OnTaskDetails={OnTaskDetails}
-                            OnChecklistChange={onChecklistChange}
                             onTagClick={onTagClick}
                             onSettingsClick={() => {
                                 setTaskMenuTaskId(prev => prev === task.id ? null : task.id);
@@ -170,22 +162,18 @@ export const TasksColumn = ({
 
                         {taskMenuTaskId === task.id && (
                             <div className="task-dropdown-menu" ref={taskMenuRef}>
-                                <button
+                                {/* <button
                                     type="button"
                                     className="task-menu-item"
-                                    onClick={() => {
-                                        onTaskEdit(task.id);
-                                        setTaskMenuTaskId(null);
-                                    }}
                                 >
                                     Редактировать
-                                </button>
+                                </button> */}
 
                                 <button
                                     type="button"
                                     className="task-menu-item task-menu-item--danger"
                                     onClick={() => {
-                                        onTaskDelete(task.id);
+                                        handleDeleteTask(task.id);
                                         setTaskMenuTaskId(null);
                                     }}
                                 >

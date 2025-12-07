@@ -1,42 +1,42 @@
 import "./Task.css"
-// import plus from "/src/assets/plus.png"
 import arrow from "/src/assets/arrow.png"
 import dots from "/src/assets/dots.png"
-import type { Task as TaskType } from "../../types/task";
-import type { Checklist } from "../../types/checklist";
-import { useEffect, useState } from "react";
-interface TaskProps{
+import type {
+    Task as TaskType
+} from "../../types/types"
+import { useCallback } from "react";
+import { useTaskContext } from "../../utils/TaskProvider";
+import { useBoardContext } from "../../utils/BoardProvider";
+
+interface TaskProps {
     task: TaskType;
-    boardShortName? : string;
-    OnTaskDetails : (task: TaskType) => void;
-    OnChecklistChange : (task: TaskType) => void;
     onTagClick: (tag: string) => void;
     onSettingsClick: () => void;
 }
 
-export const Task = ({task, boardShortName, OnTaskDetails, OnChecklistChange, onTagClick, onSettingsClick} : TaskProps) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [checklistsValues, onChangeChecklistsValues] = useState<Checklist[] | undefined>(task.checklists);
+export const Task = ({ task, onTagClick, onSettingsClick }: TaskProps) => {
+    const taskCtx = useTaskContext();
+    const boardCtx = useBoardContext();
+    const isExpanded = taskCtx.expandedTaskId === task.id;
 
-    useEffect(() => {
-        onChangeChecklistsValues(task.checklists)
-    },[task])
+    const handleToggle = useCallback(async () => {
+        if (isExpanded) {
+            taskCtx.setExpandedTaskId(null);
+        } else {
+            taskCtx.setExpandedTaskId(task.id);
+            await taskCtx.fetchTaskDetails(task.id);
+        }
+    }, [isExpanded, taskCtx, task.id]);
 
-    const handleToggle = () => {
-        setIsExpanded(!isExpanded);
-        OnTaskDetails(task);
-    };
-
-    const handleChecklistChange = (
-        checklistIdx : number,
-        itemIdx : number,
+    const handleChecklistChange = useCallback(async (
+        checklistIdx: number,
+        itemIdx: number,
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
-        if (!checklistsValues) return;
-            
-        const updatedChecklists = checklistsValues.map((checklist, idx) => {
+        if (!task.checklists) return;
+
+        const updatedChecklists = task.checklists.map((checklist, idx) => {
             if (idx !== checklistIdx) return checklist;
-            
             return {
                 ...checklist,
                 items: checklist.items.map((item, iIdx) => {
@@ -45,31 +45,30 @@ export const Task = ({task, boardShortName, OnTaskDetails, OnChecklistChange, on
                 })
             };
         });
-        
-        onChangeChecklistsValues(updatedChecklists);
-        task.checklists = updatedChecklists 
-        OnChecklistChange(task);
-    }
 
-    return(
+        const updatedTask = { ...task, checklists: updatedChecklists };
+        await taskCtx.updateTask(updatedTask);
+    }, [task, taskCtx]);
+
+    return (
         <div className="task-container">
             <div className="task__header">
-                <span className="task__header-text">{boardShortName} #{task.number} </span>
+                <span className="task__header-text">{boardCtx.board?.shortName} #{task.number} </span>
             </div>
             <div className="task__title">
                 <h3>{task.title}</h3>
             </div>
 
-            <img 
+            <img
                 className={`arrow-icon ${isExpanded ? 'arrow-icon--active' : ''}`}
-                src={arrow} 
+                src={arrow}
                 alt="Toggle task details"
                 onClick={handleToggle}
             />
 
-            <img 
+            <img
                 className="dots-icon"
-                src={dots} 
+                src={dots}
                 alt="Toggle task details"
                 onClick={onSettingsClick}
             />
@@ -80,16 +79,16 @@ export const Task = ({task, boardShortName, OnTaskDetails, OnChecklistChange, on
                         <div className="task__description">
                             <p>{task.description}</p>
                         </div>
-                        
                         <div className="task__tags">
                             {task.tags?.map((tag, index) => (
+                                tag !== "" &&
                                 <span key={index} className="tag" onClick={() => onTagClick(tag)}>#{tag} </span>
                             ))}
                         </div>
                     </div>
 
                     <div className="task__checklists">
-                        {checklistsValues?.map((checklist, idx) => (
+                        {task.checklists?.map((checklist, idx) => (
                             <div key={idx} className="checklist">
                                 <h4>{checklist.title}</h4>
                                 {checklist.items.map((item, itemIdx) => (

@@ -3,12 +3,16 @@ import './App.css'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { MainField } from './pages/MainField/MainField';
 import { AuthField } from './pages/AuthField/AuthField';
+import { TaskProvider } from './utils/TaskProvider';
+import { BoardProvider } from './utils/BoardProvider';
 
 function App() {
 
   const isAuthenticated = false 
   return (
     //TODO: Настроить роутинг
+    <BoardProvider>
+    <TaskProvider>
     <Router>
        <Routes>
         <Route
@@ -25,6 +29,8 @@ function App() {
         />
       </Routes>
     </Router>
+    </TaskProvider>
+    </BoardProvider>
   )
 }
 

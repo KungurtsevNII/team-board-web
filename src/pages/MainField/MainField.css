@@ -15,36 +15,67 @@
     flex-direction: column;
 }
 
-.choose-field__add{
-    position: absolute;
-    right: 10px;
-    font-size: 30px;
-    top:3px;
-    background-color: inherit;
-    border: none;
+.choose-field__add {
+  position: absolute;
+  right: 10px;
+  font-size: 30px;
+  top: 50%; /* ✅ Центрируем по вертикали */
+  transform: translateY(-50%); /* ✅ Компенсируем половину высоты */
+  background-color: inherit;
+  border: none;
+  cursor: pointer;
 }
 
-.choose-field__add:focus{
-    border: none;
-    outline: none;
+
+.choose-field__add:focus {
+  border: none;
+  outline: none;
 }
 
 
 .choose-field__list {
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1;
-    padding: 0 0 10px 0;
-    min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  padding: 5px 10px 10px 5px;
+  min-height: 0;
 }
 
+
+.choose-field__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.choose-field__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.choose-field__list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.choose-field__list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* MainField.css */
 .choose-field__title {
-    position: relative;
-    height: 40px;
-    padding-left: 10px;
+  position: relative;
+  height: 53px;
+  padding-left: 10px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.choose-field__title h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .main-field__right{
@@ -115,20 +146,6 @@
 }
 
 
-.modal-button-field{
-    margin-top: 12px;
-    width: 100%;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.modal-button{
-    background-color: #5C85FF;
-    color: white;
-    padding: 0 30px;
-}
-
 .main-field__empty{
     display: flex;
     flex-direction: column;
@@ -147,32 +164,6 @@
     justify-content: center;
 }
 
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  gap: 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-width: 300px; /* минимальная ширина формы */
-}
-
-.modal-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  width: 100%; /* добавил для корректной работы */
-}
-
-/* Для инпутов */
-.modal-row input {
-  width: 100%;
-  min-width: 0px;
-  box-sizing: border-box; /* важно для правильного расчета ширины */
-  padding: 15px 5px;
-  font-size: 20px;
-}
 
 /* базовое поведение — как сейчас */
 .choose-field {
