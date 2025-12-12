@@ -1,28 +1,55 @@
-import type { Board } from "../../types/board";
-import "./BoardRow.css"
-import arrowIcon from "/src/assets/arrow.png"
+// BoardRow.tsx
+import type { Board } from "../../types/types";
+import "./BoardRow.css";
+import arrowIcon from "/src/assets/arrow.png";
+import deleteIcon from "/src/assets/delete.svg";
 
-interface BoardRowProps{
+interface BoardRowProps {
     board: Board;
     isActive: boolean;
+    onDelete: (boardId: string) => void;
     onSelect?: (boardId: string) => void;
 }
 
-export const BoardRow = ({board, isActive, onSelect}: BoardRowProps) => {
-    const handleClick = () => onSelect?.(board.id);
-    return(
-        <>
-            <div className="board-row-container" 
-                key={board.id} 
-                onClick={handleClick}>
+export const BoardRow = ({ board, isActive, onSelect, onDelete }: BoardRowProps) => {
+    const handleClick = () => {
+        console.log('BoardRow clicked:', board.id, 'isActive:', isActive);
+        onSelect?.(board.id);
+    };
 
-                <div className={isActive ? "board-row-rect--active" : "board-row-rect"}></div>
-                <div className={isActive ? "board-row__title--active" : "board-row__title"}>
-                   <p className="board-row__title-text">{board.name}</p>
-                </div>
-                {!isActive && <img src={arrowIcon} alt="show" className="board-row-arrow-icon"/>}
+    const handleDelete = () => {
+        onDelete(board.id);
+    };
 
+    return (
+        <div
+            className={`board-row-container ${isActive ? 'board-row-container--active' : ''}`}
+            onClick={handleClick}
+        >
+            {/* Синяя полоска слева */}
+            <div className="board-row-rect" />
+
+            <div
+                className="board-row__title"
+                data-tooltip={board.name}
+            >
+                <p className="board-row__title-text"
+                >
+                    {board.name}
+                </p>
             </div>
-        </>
-    )
-}
+
+            <img
+                src={deleteIcon}
+                alt="delete"
+                className="board-row-delete-icon"
+                onClick={handleDelete}
+            />
+            <img
+                src={arrowIcon}
+                alt="arrow"
+                className="board-row-arrow-icon"
+            />
+        </div>
+    );
+};

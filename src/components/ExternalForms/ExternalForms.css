@@ -1,0 +1,40 @@
+.modal-button-field{
+    margin-top: 12px;
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-button{
+    background-color: #5C85FF;
+    color: white;
+    padding: 0 30px;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 300px; /* минимальная ширина формы */
+}
+
+.modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  width: 100%; /* добавил для корректной работы */
+}
+
+/* Для инпутов */
+.modal-row input {
+  width: 100%;
+  min-width: 0px;
+  box-sizing: border-box; /* важно для правильного расчета ширины */
+  padding: 15px 5px;
+  font-size: 20px;
+}

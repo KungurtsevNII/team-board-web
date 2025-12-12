@@ -2,19 +2,20 @@ import { useState } from "react"
 import "./AuthField.css"
 import iconEye from "/src/assets/eye.png"
 import iconHidden from "/src/assets/hidden.png"
+import { useNavigate } from "react-router-dom"
+import samgtuLogo from "/src/assets/samgtu_logo.png"
 
-/**
- * AuthField component that handles both login and registration forms
- * It toggles between login and registration views based on user preference
- */
+
 export const AuthField = () => {
-    const [isLogin, setIsLogin] = useState(false)
+    const [isLogin, setIsLogin] = useState(true)
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [passType, setPassType] = useState('password');
 
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+
+    const navigate = useNavigate();
     
     const handlePasswordVisibility = (
         passVisible: boolean = isPasswordVisible, 
@@ -34,9 +35,12 @@ export const AuthField = () => {
     }
 
     const OnSubmitLogin = (e: React.FormEvent<HTMLFormElement>) => {
-        //TODO: доделать вход
-        alert('Вход')
         e.preventDefault()
+        if (email.trim() == 'admin@admin' && password.trim() == 'admin') {
+            //TODO: route to /main
+        }
+        navigate('/main');
+        
     }
 
     const OnSubmitRegister = (e: React.FormEvent<HTMLFormElement>) => {
@@ -114,13 +118,13 @@ export const AuthField = () => {
                         </p>
                         <p><button>продолжить</button></p>
                     </form>
-                    <p><button className="another-form-button" onClick={() => handleLogin(true)}>войти</button></p>
+                    <button className="another-form-button" onClick={() => handleLogin(true)}>войти</button>
                 </div>
             }
             </div>
        </div>
         <div className="logo-anchor">
-            <img className = "samgtu-logo" src="src/assets/samgtu_logo.png" alt="" />
+            <img className = "samgtu-logo" src={samgtuLogo} />
         </div>
        </>
     )

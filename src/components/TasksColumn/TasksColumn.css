@@ -108,3 +108,50 @@
   min-height: 0;
 }
 
+.task-wrapper {
+  position: relative;
+}
+
+/* Меню таски — копия по стилю column-dropdown-menu */
+.task-dropdown-menu {
+  position: absolute;
+  top: 0;              /* прижато к верхнему краю таски, можно подогнать */
+  right: 0;            /* рядом с кнопкой с тремя точками */
+  margin-top: 5px;
+  background-color: white;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 150;        /* чуть выше, чем колонка, на всякий */
+  overflow: hidden;
+  padding: 5px;
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Пункты меню — копия column-menu-item */
+.task-menu-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: none;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1a1a1a;
+  transition: background-color 0.15s ease;
+}
+
+.task-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.task-menu-item:active {
+  background-color: #e8e8e8;
+}
+
+.task-menu-item--danger {
+  color: red;
+}

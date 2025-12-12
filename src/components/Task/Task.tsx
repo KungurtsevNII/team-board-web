@@ -1,63 +1,42 @@
 import "./Task.css"
-// import plus from "/src/assets/plus.png"
 import arrow from "/src/assets/arrow.png"
-import type { Task as TaskType } from "../../types/task";
-import type { Checklist } from "../../types/checklist";
-import { useState } from "react";
+import dots from "/src/assets/dots.png"
+import type {
+    Task as TaskType
+} from "../../types/types"
+import { useCallback } from "react";
+import { useTaskContext } from "../../utils/TaskProvider";
+import { useBoardContext } from "../../utils/BoardProvider";
 
-interface TaskProps{
+interface TaskProps {
     task: TaskType;
-    boardShortName? : string;
+    onTagClick: (tag: string) => void;
+    onSettingsClick: () => void;
 }
 
-export const Task = ({task, boardShortName} : TaskProps) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [checklistsValues, onChangeChecklistsValues] = useState<Checklist[] | undefined>(task.checklists);
-    
-    const name = "TBback"
-    const num = 3
-    const title = "Описать структуру бд"
-    const description = "Сделать структуру бд для проекта"
-    const tags = ["db", "structure"]
-    const checklists : Checklist[] = [
-        {
-            title: "Сделать структуру бд",
-            items: [
-                {
-                    title: "Описать user",
-                    completed: false
-                },
-                {
-                    title: "Описать product",
-                    completed: true
-                }
-            ]
-        },
-        {
-            title: "Сделать структуру бд",
-            items: [
-                {
-                    title: "Сделать структуру бд",
-                    completed: false
-                }
-            ]
+export const Task = ({ task, onTagClick, onSettingsClick }: TaskProps) => {
+    const taskCtx = useTaskContext();
+    const boardCtx = useBoardContext();
+    const isExpanded = taskCtx.expandedTaskId === task.id;
+
+    const handleToggle = useCallback(async () => {
+        if (isExpanded) {
+            taskCtx.setExpandedTaskId(null);
+        } else {
+            taskCtx.setExpandedTaskId(task.id);
+            await taskCtx.fetchTaskDetails(task.id);
         }
-    ]
+    }, [isExpanded, taskCtx, task.id]);
 
-    const handleToggle = () => {
-        setIsExpanded(!isExpanded);
-    };
-
-    const handleChecklistChange = (
-        checklistIdx : number,
-        itemIdx : number,
+    const handleChecklistChange = useCallback(async (
+        checklistIdx: number,
+        itemIdx: number,
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
-        if (!checklistsValues) return;
-            
-        const updatedChecklists = checklistsValues.map((checklist, idx) => {
+        if (!task.checklists) return;
+
+        const updatedChecklists = task.checklists.map((checklist, idx) => {
             if (idx !== checklistIdx) return checklist;
-            
             return {
                 ...checklist,
                 items: checklist.items.map((item, iIdx) => {
@@ -66,24 +45,32 @@ export const Task = ({task, boardShortName} : TaskProps) => {
                 })
             };
         });
-        
-        onChangeChecklistsValues(updatedChecklists);
-    }
 
-    return(
+        const updatedTask = { ...task, checklists: updatedChecklists };
+        await taskCtx.updateTask(updatedTask);
+    }, [task, taskCtx]);
+
+    return (
         <div className="task-container">
             <div className="task__header">
-                <span className="task__header-text">{boardShortName} #{task.number} </span>
+                <span className="task__header-text">{boardCtx.board?.shortName} #{task.number} </span>
             </div>
             <div className="task__title">
                 <h3>{task.title}</h3>
             </div>
 
-            <img 
+            <img
                 className={`arrow-icon ${isExpanded ? 'arrow-icon--active' : ''}`}
-                src={arrow} 
+                src={arrow}
                 alt="Toggle task details"
                 onClick={handleToggle}
+            />
+
+            <img
+                className="dots-icon"
+                src={dots}
+                alt="Toggle task details"
+                onClick={onSettingsClick}
             />
 
             <div className={`task__details ${isExpanded ? 'task__details--expanded' : ''}`}>
@@ -92,16 +79,16 @@ export const Task = ({task, boardShortName} : TaskProps) => {
                         <div className="task__description">
                             <p>{task.description}</p>
                         </div>
-                        
                         <div className="task__tags">
                             {task.tags?.map((tag, index) => (
-                                <span key={index} className="tag">#{tag} </span>
+                                tag !== "" &&
+                                <span key={index} className="tag" onClick={() => onTagClick(tag)}>#{tag} </span>
                             ))}
                         </div>
                     </div>
 
                     <div className="task__checklists">
-                        {checklistsValues?.map((checklist, idx) => (
+                        {task.checklists?.map((checklist, idx) => (
                             <div key={idx} className="checklist">
                                 <h4>{checklist.title}</h4>
                                 {checklist.items.map((item, itemIdx) => (

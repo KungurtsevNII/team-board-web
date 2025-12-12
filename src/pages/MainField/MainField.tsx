@@ -1,142 +1,237 @@
 import "./MainField.css"
 import { TasksColumn } from "../../components/TasksColumn/TasksColumn"
 import { BoardRow } from "../../components/BoardRow/BoardRow"
-import { Modal } from "../../components/Modal/Modal"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
-import searchIcon from "/src/assets/search.png"
 import humanIcon from "/src/assets/human.png"
-import boardIcon from "/src/assets/board.png"
-import taskIcon from "/src/assets/task.png"
-import columnIcon from "/src/assets/column.png"
 
-
-import type { Board } from "../../types/board"
-import type { Column } from "../../types/column"
-import type { Task } from "../../types/task"
-import { dataService } from "../../services/dataService"
+import type {
+    BoardRequest, Column, ColumnRequest, Task, TaskRequest, SearchTasksRequest
+} from "../../types/types"
 import { Loading } from "../../components/Loading/Loading"
+import { useTaskContext } from "../../utils/TaskProvider"
+import { useBoardContext } from "../../utils/BoardProvider"
+import { ErrorModal } from "../../components/ErrorModal/ErrorModal"
+import { ExternalForms } from "../../components/ExternalForms/ExternalForms"
 
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(
+        window.matchMedia("(max-width: 768px)").matches
+    );
+
+    useEffect(() => {
+        const mql = window.matchMedia("(max-width: 768px)");
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+
+        mql.addEventListener("change", handler);
+        return () => mql.removeEventListener("change", handler);
+    }, []);
+
+    return isMobile;
+};
 
 export const MainField = () => {
     const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
     const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
-
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [activeBoardId, setActiveBoardId] = useState<string>("");
+    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+    const [userModalOpen, setUserModalOpen] = useState(false);
 
     const [loadingColumns, setLoadingColumns] = useState(true);
     const [loadingBoards, setLoadingBoards] = useState(true);
 
+    const [taskColumn, setTaskColumn] = useState<Column | null>(null);
 
-    const [board, setBoard] = useState<Board | null>(null);
-    const [boards, setBoards] = useState<Board[]>([]);
-    const [columns, setColumns] = useState<Column[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
+    const isMobile = useIsMobile();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+    const [searchQuery, setSearchQuery] = useState("")
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
 
-    const boardId = "board-1";
+    const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+
+    const taskCtx = useTaskContext()
+    const boardCtx = useBoardContext()
 
     useEffect(() => {
-        let cancelled = false;
+        // при переходе на десктоп всегда открыта
+        if (!isMobile) {
+            setIsSidebarOpen(true);
+        } else {
+            setIsSidebarOpen(false);
+        }
+    }, [isMobile]);
 
+    const toggleSidebar = useCallback(() => {
+        if (isMobile) {
+            setIsSidebarOpen(prev => !prev);
+        }
+    }, [isMobile]);
+
+
+    useEffect(() => {
+        setLoadingBoards(true);
         const load = async () => {
-            try {
-                setLoadingBoards(true);
-                const [b /*, cols, ts*/] = await Promise.all([
-                    dataService.getBoards(),
-                    // dataService.getColumns(boardId),
-                    // dataService.getTasks(boardId),
-                ]);
-                if (cancelled) return;
-                setBoards(b);
-                // setColumns(cols);
-                // setTasks(ts);
-            } catch (e: any) {
-                if (cancelled) return;
-                setError(e?.message ?? "Unknown error");
-            } finally {
-                if (!cancelled) setLoadingBoards(false);
-            }
-        };
-
-        load();
-        return () => {
-            cancelled = true;
-        };
+            await boardCtx.fetchBoards()
+            setLoadingBoards(false)
+        }
+        load()
     }, []);
 
+// MainField.tsx
+
+useEffect(() => {
+    setIsSidebarOpen(false);
+    setLoadingColumns(true);
+    const load = async () => {
+        if (!pendingTaskId) {
+            taskCtx.setExpandedTaskId(null);
+        }
+
+        const board = await boardCtx.fetchBoard();
+        if (board?.tasks) {
+            taskCtx.setTasks(board.tasks);
+        } else {
+            taskCtx.setTasks([]);
+        }
+        setLoadingColumns(false);
+    };
+    load();
+}, [boardCtx.activeBoardId]); 
+
+
     useEffect(() => {
-        let cancelled = false;
+        if (boardCtx.error !== null || taskCtx.error !== null) {
+            setIsErrorModalOpen(true);
+        }
+    }, [boardCtx.error, taskCtx.error]);
 
+    const handleBoardSelect = useCallback((boardId: string) => {
+        boardCtx.setActiveBoardId(boardId);
+    }, []);
 
-        const load = async () => {
-            try {
-                setLoadingColumns(true);
-                console.log("activeBoardId", activeBoardId);
-                const [b, cols, ts] = await Promise.all([
-                    dataService.getBoard(activeBoardId),
-                    dataService.getColumns(activeBoardId),
-                    dataService.getTasks(activeBoardId),
-                ]);
-                if (cancelled) return;
-                setBoard(b);
-                setColumns(cols);
-                setTasks(ts);
-                console.log("board", b);
-            } catch (e: any) {
-                if (cancelled) return;
-                setError(e?.message ?? "Unknown error");
-            } finally {
-                if (!cancelled) setLoadingColumns(false);
-            }
-        };
+    const handleOnTaskColumn = useCallback((column: Column) => {
+        setTaskColumn(column);
+        setIsTaskModalOpen(true)
+    }, [])
 
-        load();
-        return () => {
-            cancelled = true;
-        };
-    }, [activeBoardId]);
-
-    const openAddBoardModal = () => setIsBoardModalOpen(true);
-    const closeAddBoardModal = () => setIsBoardModalOpen(false);
-
-    const openAddTaskModal = () => setIsTaskModalOpen(true);
-    const closeAddTaskModal = () => setIsTaskModalOpen(false);
-
-    const openAddColumnModal = () => setIsColumnModalOpen(true);
-    const closeAddColumnModal = () => setIsColumnModalOpen(false);
-
-    const onAddTask = (column: Column) => {
-        console.log(column.name)
-        openAddTaskModal()
-    }
-
-    // перемещение задачи внутри фронта
-    const moveTaskToColumn = (taskId: string, targetColumnId: string) => {
-        setTasks(prev =>
-            prev.map(t =>
-                t.id === taskId ? { ...t, column: { ...t.column, id: targetColumnId } } : t
-            )
-        )
-    }
-
+    //FIXME на телефоне таски не муваются
     // обработчик drop из колонки
-    const handleTaskDrop = (taskId: string, targetColumnId: string) => {
-        moveTaskToColumn(taskId, targetColumnId)
-        // TODO: здесь можно вызвать dataService.updateTaskColumn(taskId, targetColumnId)
+    const handleTaskDrop = useCallback(async (taskId: string, targetColumnId: string) => {
+        taskCtx.moveTask(taskId, targetColumnId);
+    }, []);
+
+const handleTaskDetails = useCallback((task: Task) => {
+    if (boardCtx.activeBoardId !== task.boardID) {
+        setLoadingColumns(true);
+        boardCtx.setActiveBoardId(task.boardID);
+        setPendingTaskId(task.id); 
+    } else {
+        taskCtx.setExpandedTaskId(task.id);
+        taskCtx.fetchTaskDetails(task.id);
+    }
+}, [boardCtx, taskCtx]);
+
+
+    // Отслеживаем завершение загрузки
+    useEffect(() => {
+        if (!loadingColumns && pendingTaskId) {
+            // Доска загрузилась - открываем таску
+            taskCtx.setExpandedTaskId(pendingTaskId);
+            taskCtx.fetchTaskDetails(pendingTaskId);
+            setPendingTaskId(null);
+        }
+    }, [loadingColumns, pendingTaskId, taskCtx]);
+
+
+    const handleDeleteBoard = (boardId: string) => {
+        boardCtx.deleteBoard(boardId)
     }
 
+    const handleAddColumn = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const columnName = form.elements.namedItem('column-name') as HTMLInputElement;
+        const col: ColumnRequest = { name: columnName.value }
+        boardCtx.addColumn(col)
+        setIsColumnModalOpen(false)
+    }, [boardCtx])
+
+    const handleAddBoard = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+
+        const form = e.target as HTMLFormElement;
+        const name = form.elements.namedItem('board-name') as HTMLInputElement;
+        const shortName = form.elements.namedItem('board-short-name') as HTMLInputElement;
+
+        let brd: BoardRequest = { name: name.value, shortName: shortName.value }
+
+        boardCtx.addBoard(brd)
+        setIsBoardModalOpen(false);
+    }, [])
+
+    const handleAddTask = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+
+        //Получаем данные из ExternalForms через customEvent
+        const taskData = (e.target as any).taskData as TaskRequest;
+
+        if (!taskData) {
+            console.error('Task data not found');
+            return;
+        }
+
+        console.log('Creating task:', taskData);
+        taskCtx.addTask(taskData);
+        setIsTaskModalOpen(false);
+        setTaskColumn(null); // ✅ Очищаем после создания
+    }, [taskCtx]);
+
+    // const filteredTasks = useMemo(() => {
+    //     return taskCtx.tasks.filter(t => {
+    //         const sq = searchQuery.toLowerCase().trim();
+    //         if (!sq) return true;
+
+    //         if (sq[0] === "#") {
+    //             const tagQuery = sq.slice(1);
+    //             if (!tagQuery) return false;
+    //             return t.tags?.some(tag =>
+    //                 tag.toLowerCase() === tagQuery ||
+    //                 tag.toLowerCase().includes(tagQuery)
+    //             );
+    //         }
+
+    //         return t.title.toLowerCase().includes(sq);
+    //     });
+    // }, [taskCtx.tasks, searchQuery]);
+
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.toLowerCase().split(' ');
+        const tags = value.filter(v => v[0] === "#");
+        const query = value.filter(v => v[0] !== "#").join(" ");
+        setSearchQuery(e.target.value);
+        const req: SearchTasksRequest = {
+            query: query,
+            filters: { tags: tags.map(v => v.slice(1)) }
+        }
+        console.log(req.query, req.filters?.tags);
+        taskCtx.searchTasks(req)
+        setIsSearchOpen(value.length > 0);
+    }, []);
+
+    const handleOnCloseErrorModal = useCallback(() => {
+        setIsErrorModalOpen(false);
+        taskCtx.setError(null)
+        boardCtx.setError(null)
+    }, [])
 
     return (
         <>
             <div className="main-field">
-                <div className="choose-field">
+                <div className={`choose-field ${isMobile ? "choose-field--mobile" : ""} ${isSidebarOpen ? "choose-field--open" : ""}`}>
                     <div className="choose-field__title">
                         <h3>Мои доски</h3>
-                        <button className="choose-field__add" onClick={openAddBoardModal}>+</button> {/* TODO: add modal */}
+                        <button className="choose-field__add" onClick={() => setIsBoardModalOpen(true)}>+</button>
                     </div>
                     <div className="choose-field__list">
                         {loadingBoards
@@ -145,30 +240,83 @@ export const MainField = () => {
                                     size={100}
                                 />
                             </div>
-                            : boards.length === 0
+                            : boardCtx.boards?.length === 0
                                 ? <div className="choose-field__empty">
                                     <p>Список досок пуст</p>
-                                    <button>Создать доску</button>
+                                    <button onClick={() => setIsBoardModalOpen(true)} >Создать доску</button>
                                 </div>
-                                : boards.map(v =>
+                                : boardCtx.boards?.map(v =>
                                     <BoardRow
                                         key={v.id}
-                                        isActive={activeBoardId === v.id}
+                                        isActive={boardCtx.activeBoardId === v.id}
                                         board={v}
-                                        onSelect={(v) => { setActiveBoardId(v); console.log(v) }}
+                                        onSelect={handleBoardSelect}
+                                        onDelete={handleDeleteBoard}
                                     />
                                 )}
                     </div>
                 </div>
-
+                {isMobile && isSidebarOpen && (
+                    <div
+                        className="sidebar-backdrop"
+                        onClick={() => setIsSidebarOpen(false)}
+                    />
+                )}
                 <div className="main-field__right">
                     <div className="main-field__header">
-                        <img
-                            className="search-icon"
-                            src={searchIcon}
-                            alt="search"
-                        />
-                        <div className="user-data">
+                        <div className="main-field__header-right">
+                            {isMobile && (
+                                <button
+                                    className="choose-field__toggle"
+                                    onClick={toggleSidebar}
+                                >
+                                    ☰
+                                </button>
+                            )}
+                            <div className="search-wrapper">
+                                <input //FIXME на телефоне на имя заезжает
+                                    className="search-input"
+                                    type="text"
+                                    placeholder="Поиск задач"
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    onBlur={() => setTimeout(() => setIsSearchOpen(false), 150)}
+                                    onFocus={() => searchQuery && setIsSearchOpen(true)}
+                                />
+                                {isSearchOpen && taskCtx.searchedTasks.length > 0 && (
+                                    <div className="search-dropdown">
+                                        {taskCtx.searchedTasks.slice(0, 10).map((task) => (
+                                            <div
+                                                key={task.id}
+                                                className="search-item"
+                                                onMouseDown={() => {
+                                                    handleTaskDetails(task);
+                                                    setIsSearchOpen(false);
+                                                }}
+                                            >
+                                                <div className="search-item-title">{task.title}</div>
+                                                {/* TODO заполнить данные как-то, просто с бека мало приходит */}
+                                                {/* <div className="search-item-meta">
+                                                    {boardCtx.board?.shortName == null
+                                                        ? boardCtx.board?.shortName
+                                                        : boardCtx.board?.name} #{
+                                                        taskCtx.tasks.find(t => t.id === task.id)?.number
+                                                    } · {
+                                                        boardCtx.columns.find(c => c.id === task.columnID)?.name}
+                                                </div> */}
+                                                <div className="search-item-meta">
+                                                    №{task.number}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {taskCtx.searchedTasks.length > 10 && (
+                                            <div className="search-more">Show all ({taskCtx.searchedTasks.length})</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="user-data" onClick={() => setUserModalOpen(true)}>
                             <div className="user-data__name">Владимир</div>
                             <img className="user-data__icon" src={humanIcon} alt="" />
                         </div>
@@ -176,7 +324,7 @@ export const MainField = () => {
 
                     <div className="main-field__content">
                         {
-                            activeBoardId === ""
+                            boardCtx.activeBoardId === ""
                                 ? <div className="main-field__empty">Выберите доску</div>
                                 : loadingColumns
                                     ? <div className="main-field__empty">
@@ -184,21 +332,20 @@ export const MainField = () => {
                                             size={200}
                                         />
                                     </div>
-                                    : columns.length == 0
+                                    : boardCtx.columns.length == 0
                                         ? <div className="main-field__empty">
                                             <p>Тут пока пусто</p>
-                                            <button style={{ backgroundColor: 'var(--color-main-blue)' }} onClick={openAddColumnModal}>Создать колонку</button>
+                                            <button style={{ backgroundColor: 'var(--color-main-blue)' }} onClick={() => setIsColumnModalOpen(true)}>Создать колонку</button>
                                         </div>
-                                        : columns.map(v =>
+                                        : boardCtx.columns?.map(v =>
                                             <TasksColumn
                                                 key={v.id}
                                                 column={v}
-                                                tasks={tasks.filter(t => t.column.id === v.id)}
-                                                boardShortName={board?.shortName}
-                                                onTaskColumn={onAddTask}
-                                                onAddColumn={openAddColumnModal}
-                                                // dnd
-                                                onTaskDrop={handleTaskDrop}         // колонка сообщает, что в неё уронили таску
+                                                tasks={taskCtx.tasks.filter(t => t.columnID === v.id)}
+                                                onAddColumn={() => setIsColumnModalOpen(true)}
+                                                onAddTask={() => handleOnTaskColumn(v)}
+                                                onTaskDrop={handleTaskDrop}
+                                                onTagClick={(tag) => { setSearchQuery(`#${tag}`); setIsSearchOpen(true) }}
                                             />
                                         )
                         }
@@ -206,68 +353,36 @@ export const MainField = () => {
 
                 </div>
 
-                <Modal isOpen={isBoardModalOpen} onClose={closeAddBoardModal} title="Создать доску" iconPath={boardIcon}>
-                    <form
-                        className="modal-form"
-                        onSubmit={() => alert("submited")}
-                    >
-                        <div className="modal-row">
-                            <label htmlFor="board-name">Название доски</label>
-                            <input type="text" id="board-name" name="board-name" />
-                        </div>
-                        <div className="modal-row">
-                            <label htmlFor="board-short-name">Сокращенное название</label>
-                            <input type="text" id="board-short-name" name="board-short-name" />
-                        </div>
-                        <div className="modal-button-field">
-                            <button className="modal-button">
-                                Создать
-                            </button>
-                        </div>
-                    </form>
-                </Modal>
+                <ExternalForms
+                    isBoardModalOpen={isBoardModalOpen}
+                    onCloseBoardModal={() => setIsBoardModalOpen(false)}
+                    onSubmitBoard={handleAddBoard}
 
-                <Modal isOpen={isTaskModalOpen} onClose={closeAddTaskModal} title="Создать задачу" iconPath={taskIcon}>
-                    <form
-                        className="modal-form"
-                        onSubmit={() => alert("submited")}
-                    >
-                        <div className="modal-row">
-                            <label htmlFor="task-name">Название</label>
-                            <input type="text" id="task-name" name="task-name" />
-                        </div>
-                        <div className="modal-row">
-                            <label htmlFor="task-description">Описание</label>
-                            <input type="text" id="task-description" name="task-description" />
-                        </div>
-                        <div className="modal-row">
-                            <label htmlFor="task-tags">Теги</label>
-                            <input type="text" id="task-tags" name="task-tags" />
-                        </div>
-                        <div className="modal-button-field">
-                            <button className="modal-button">
-                                Создать
-                            </button>
-                        </div>
-                    </form>
-                </Modal>
+                    isTaskModalOpen={isTaskModalOpen}
+                    onCloseTaskModal={() => {
+                        setIsTaskModalOpen(false);
+                        setTaskColumn(null);
+                    }}
+                    onSubmitTask={handleAddTask}
+                    taskColumn={taskColumn}
+                    activeBoardId={boardCtx.activeBoardId}
 
-                <Modal isOpen={isColumnModalOpen} onClose={closeAddColumnModal} title="Создать колонку" iconPath={columnIcon}>
-                    <form
-                        className="modal-form"
-                        onSubmit={() => alert("submited")}
-                    >
-                        <div className="modal-row">
-                            <label htmlFor="column-name">Название колонки</label>
-                            <input type="text" id="column-name" name="column-name" />
-                        </div>
-                        <div className="modal-button-field">
-                            <button className="modal-button">
-                                Создать
-                            </button>
-                        </div>
-                    </form>
-                </Modal>
+                    isColumnModalOpen={isColumnModalOpen}
+                    onCloseColumnModal={() => setIsColumnModalOpen(false)}
+                    onSubmitColumn={handleAddColumn}
+
+                    userModalOpen={userModalOpen}
+                    onCloseUserModal={() => setUserModalOpen(false)}
+                />
+
+                {
+                    (boardCtx.error || taskCtx.error) &&
+                    <ErrorModal
+                        text={taskCtx.error || boardCtx.error}
+                        isOpen={isErrorModalOpen}
+                        onClose={handleOnCloseErrorModal}
+                    />
+                }
 
             </div>
         </>
