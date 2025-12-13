@@ -108,7 +108,7 @@ export const BoardProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
         } catch (err) {
             console.error(err)
-            setError("Не удалось добавить доску");
+            setError("Не удалось получить доски");
         } finally {
             setLoading(false);
         }
@@ -133,8 +133,13 @@ export const BoardProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
             return resp
         } catch (err) {
+            const error = err as Error;
             console.error(err)
-            setError("Не удалось открыть доску");
+            if (error.message === "Refresh failed"){
+                setError("Ошибка авторизации");
+            }else{
+                setError("Не удалось получить доску");
+            }
             setBoard(null);
             setColumns([]);
             return null

@@ -16,18 +16,32 @@ export interface IDataService {
   deleteColumn(columnId: string): Promise<void>;
   deleteBoard(boardId: string): Promise<void>;
   searchTasks(searchTaskReq: SearchTasksRequest): Promise<Task[]>;
+  loginUser(email: string, password: string): Promise<string>;
+  registerUser(name: string, email: string, password: string): Promise<string>;
+  refreshAccessToken(): Promise<string>
+  setAuthToken(token: string | null): void;
+  logout(): Promise<void>
 }
 //TODO возвращать нормальные ошибки тут (на вывод фронт)
 
 // Сервис с реальным API
 export class ApiDataService implements IDataService {
   private baseUrl: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl: string) {
     if (baseUrl == "") {
       throw new Error("baseUrl is required")
     }
     this.baseUrl = baseUrl;
+  }
+
+  setAuthToken(token: string | null) {
+    this.authToken = token;
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    return this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {};
   }
 
   async createColumn(boardID: string, columnData: ColumnRequest): Promise<Column> {
@@ -351,6 +365,27 @@ export class ApiDataService implements IDataService {
     )
     return tasks
   }
+
+  async loginUser(_login: string, _password: string): Promise<string> {
+    throw Error("not implemented");
+
+    return ""
+  }
+
+  async registerUser(_name: string, _login: string, _password: string): Promise<string> {
+    throw Error("not implemented");
+    this.getAuthHeaders()
+    return ""
+  }
+
+  async refreshAccessToken(): Promise<string> {
+    throw Error("not implemented");
+    return ""
+  }
+
+  async logout(): Promise<void> {
+    throw Error("not implemented");
+  }
 }
 
 
@@ -358,6 +393,7 @@ export class ApiDataService implements IDataService {
 // Тестовый сервер
 export class ApiTestDataService implements IDataService {
   private baseUrl: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl: string) {
     if (baseUrl == "") {
@@ -366,11 +402,69 @@ export class ApiTestDataService implements IDataService {
     this.baseUrl = baseUrl;
   }
 
+  setAuthToken(token: string | null) {
+    this.authToken = token;
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    return this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {};
+  }
+
+  private refreshing: Promise<string> | null = null;
+
+  private async refreshOnce(): Promise<string> {
+    if (!this.refreshing) {
+      this.refreshing = (async () => {
+        const response = await fetch(`${this.baseUrl}/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Refresh failed");
+        const data = await response.json();
+        const token = data.accessToken as string;
+        this.setAuthToken(token);
+        return token;
+      })().finally(() => {
+        this.refreshing = null;
+      });
+    }
+    return this.refreshing;
+  }
+
+  private async request<T>(
+    path: string,
+    init: RequestInit = {},
+    retry = true,
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string> | undefined),
+      ...this.getAuthHeaders(),
+    };
+
+    const res = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
+
+    if (res.status === 401 && retry) {
+      await this.refreshOnce();
+      return this.request<T>(path, init, false);
+    }
+
+    if (!res.ok) {
+      throw new Error(`Request failed: ${res.status}`);
+    }
+
+    if (res.status === 204) return undefined as T;
+
+    return (await res.json()) as T;
+  }
+
+
   async createColumn(boaidID: string, column: ColumnRequest): Promise<Column> {
     const response = await fetch(`${this.baseUrl}/boards/${boaidID}/columns`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
       },
       body: JSON.stringify(column)
     })
@@ -384,7 +478,8 @@ export class ApiTestDataService implements IDataService {
     const response = await fetch(`${this.baseUrl}/tasks`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
       },
       body: JSON.stringify(task)
     })
@@ -399,7 +494,8 @@ export class ApiTestDataService implements IDataService {
     const response = await fetch(`${this.baseUrl}/boards`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
       },
       body: JSON.stringify(board)
     })
@@ -412,29 +508,35 @@ export class ApiTestDataService implements IDataService {
 
   async getBoard(boardId: string): Promise<Board> {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const response = await fetch(`${this.baseUrl}/boards/${boardId}`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch board");
-    }
-    const resp: Board = await response.json()
-    console.log(resp)
+    const raw = await this.request<any>(`/boards/${boardId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const resp: Board = raw
     return resp;
   }
 
   async getBoards(): Promise<Board[]> {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const response = await fetch(`${this.baseUrl}/boards`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch boards");
-    }
-    const boards = await response.json();
-    const resp = boards["boards"]
-    return resp;
+    const raw = await this.request<{ boards: any[] }>("/boards", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    // const boards = await response.json();
+    // const resp = boards["boards"]
+    return raw.boards;
   }
 
   async getTask(taskID: string): Promise<Task> {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const response = await fetch(`${this.baseUrl}/tasks/${taskID}`);
+    const response = await fetch(`${this.baseUrl}/tasks/${taskID}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
+        }
+      }
+    );
     if (!response.ok) {
       throw new Error("Failed to fetch tasks");
     }
@@ -445,7 +547,8 @@ export class ApiTestDataService implements IDataService {
     const response = await fetch(`${this.baseUrl}/tasks/${taskId}/move`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
       },
       body: JSON.stringify({ columnID })
     })
@@ -460,7 +563,8 @@ export class ApiTestDataService implements IDataService {
     const response = await fetch(`${this.baseUrl}/tasks/${task.id}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
       },
       body: JSON.stringify(task)
     })
@@ -474,6 +578,10 @@ export class ApiTestDataService implements IDataService {
   async deleteTask(taskId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
       method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
+      }
     })
     if (!response.ok) {
       throw new Error("Failed to delete task");
@@ -483,6 +591,10 @@ export class ApiTestDataService implements IDataService {
   async deleteColumn(columnId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/columns/${columnId}`, {
       method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
+      }
     })
     let resp
     try {
@@ -501,6 +613,10 @@ export class ApiTestDataService implements IDataService {
   async deleteBoard(boardId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/boards/${boardId}`, {
       method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
+      }
     })
     if (!response.ok) {
       throw new Error("Failed to delete task");
@@ -511,7 +627,8 @@ export class ApiTestDataService implements IDataService {
     const response = await fetch(`${this.baseUrl}/tasks/search`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders()
       },
       body: JSON.stringify(searchTaskReq)
     })
@@ -519,6 +636,50 @@ export class ApiTestDataService implements IDataService {
       throw new Error("Failed to search tasks");
     }
     return response.json()
+  }
+
+  async loginUser(email: string, password: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Login failed");
+    const data = await response.json();
+    return data.accessToken as string;
+  }
+
+  async registerUser(name: string, email: string, password: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, email, password }),
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Register failed");
+    const data = await response.json();
+    return data.accessToken as string;
+  }
+
+  async refreshAccessToken(): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Refresh failed");
+    const data = await response.json();
+    return data.accessToken as string;
+  }
+
+  async logout(): Promise<void> {
+    await fetch(`${this.baseUrl}/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
   }
 }
 

@@ -33,8 +33,6 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 	const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
 	const addTask = useCallback(async (task: TaskRequest) => {
-		// setError("Не заполнено")
-		// setTasks(prev => [...prev, task]);
 		setLoading(true);
 		try {
 			const resp = await dataService.createTask(task);

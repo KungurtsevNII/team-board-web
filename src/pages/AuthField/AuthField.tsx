@@ -4,6 +4,8 @@ import iconEye from "/src/assets/eye.png"
 import iconHidden from "/src/assets/hidden.png"
 import { useNavigate } from "react-router-dom"
 import samgtuLogo from "/src/assets/samgtu_logo.png"
+import { useUserContext } from "../../utils/UserProvider"
+import { ErrorModal } from "../../components/ErrorModal/ErrorModal"
 
 
 export const AuthField = () => {
@@ -11,12 +13,17 @@ export const AuthField = () => {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
     const [passType, setPassType] = useState('password');
 
+    const [isAuthErrorModalOpen, setIsAuthErrorModalOpen] = useState(false)
+
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
+    const user = useUserContext();
     const navigate = useNavigate();
     
+    const handleOnCloseErrorModal = () => setIsAuthErrorModalOpen(false)
+
     const handlePasswordVisibility = (
         passVisible: boolean = isPasswordVisible, 
         passTypeInput: string = passType
@@ -34,20 +41,19 @@ export const AuthField = () => {
         setPassword('')
     }
 
-    const OnSubmitLogin = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        if (email.trim() == 'admin@admin' && password.trim() == 'admin') {
-            //TODO: route to /main
-        }
-        navigate('/main');
-        
-    }
+    const OnSubmitLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const ok = await user.login(email, password);
+        if (ok) navigate("/main");
+        else setIsAuthErrorModalOpen(true)
+    };
 
-    const OnSubmitRegister = (e: React.FormEvent<HTMLFormElement>) => {
-        //TODO: доделать регистрацию
-        alert('Регистрация')
-        e.preventDefault()
-    }
+    const OnSubmitRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const ok = await user.register(name, email, password);
+        if (ok) navigate("/main");
+        else setIsAuthErrorModalOpen(true)
+    };
 
     return (
        <>
@@ -126,6 +132,8 @@ export const AuthField = () => {
         <div className="logo-anchor">
             <img className = "samgtu-logo" src={samgtuLogo} />
         </div>
+
+       <ErrorModal text={user.error} isOpen={isAuthErrorModalOpen} onClose={handleOnCloseErrorModal}/>
        </>
     )
 }
