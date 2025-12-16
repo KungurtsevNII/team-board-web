@@ -264,13 +264,13 @@ export class ApiDataService implements IDataService {
 
 
   async moveTask(taskId: string, columnID: string): Promise<Task> {
-    throw Error("not implemented");
+    // throw Error("not implemented");
     const response = await fetch(`${this.baseUrl}/tasks/${taskId}/move`, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ columnID })
+      body: JSON.stringify({ "column_id" : columnID })
     })
 
     if (!response.ok) {
@@ -279,19 +279,51 @@ export class ApiDataService implements IDataService {
     return response.json();
   }
   async updateTask(task: Task): Promise<Task> {
-    throw Error("not implemented");
     const response = await fetch(`${this.baseUrl}/tasks/${task.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(task)
-    })
+      body: JSON.stringify({
+        column_id: task.columnID,
+        board_id: task.boardID,
+        title: task.title,
+        description: task.description,
+        tags: task.tags,
+        checklists: task.checklists?.map((checklist) => ({
+          title: checklist.title,
+          items: checklist.items?.map((item) => ({
+            title: item.title,
+            completed: item.completed,
+          })) || [],
+        })) || undefined,
+      }),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to move tasks");
     }
-    return response.json();
+
+    const data = await response.json();
+
+    const tsk: Task = {
+      id: data.id,
+      boardID: data.board_id,
+      columnID: data.column_id,
+      number: data.number,
+      title: data.title,
+      description: data.description,
+      tags: data.tags,
+      checklists: data.checklists?.map((checklist: any) => ({
+        title: checklist.title,
+        items: checklist.items?.map((item: any) => ({
+          title: item.title,
+          completed: item.completed,
+        })) || [],
+      })) || [],
+    };
+
+    return tsk;
   }
 
 

@@ -8,7 +8,7 @@ import { BoardProvider } from './utils/BoardProvider';
 
 function App() {
 
-  const isAuthenticated = false 
+  const isAuthenticated = true 
   return (
     //TODO: Настроить роутинг
     <BoardProvider>

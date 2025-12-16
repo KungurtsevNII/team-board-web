@@ -94,7 +94,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 		// return false
 		setLoading(true);
 		try {
-			const tsk = await dataService.updateTask(task)
+			// var tsk = await dataService.getTask(task.id)
+			var tsk = await dataService.updateTask(task)
 			setTasks(prev => prev.map(t => t.id === task.id ? tsk : t));
 			return true
 		} catch (e) {
