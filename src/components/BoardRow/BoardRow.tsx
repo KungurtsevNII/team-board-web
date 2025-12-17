@@ -13,7 +13,6 @@ interface BoardRowProps {
 
 export const BoardRow = ({ board, isActive, onSelect, onDelete }: BoardRowProps) => {
     const handleClick = () => {
-        console.log('BoardRow clicked:', board.id, 'isActive:', isActive);
         onSelect?.(board.id);
     };
 

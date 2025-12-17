@@ -2,7 +2,10 @@
 export interface Task {
     id: string;
     boardID: string;
+    boardName?: string;
+    boardShortName?: string;
     columnID: string
+    columnName?: string;
     number: number;
     title: string;
     description?: string;

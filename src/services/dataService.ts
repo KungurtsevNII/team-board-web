@@ -379,6 +379,9 @@ export class ApiDataService implements IDataService {
         columnID: task.column_id,
         number: task.number,
         title: task.title,
+        boardName: task.board_name,
+        boardShortName: task.board_short_name,
+        columnName: task.column_name,
       })
     )
     return tasks
@@ -449,7 +452,6 @@ export class ApiTestDataService implements IDataService {
       throw new Error("Failed to fetch board");
     }
     const resp: Board = await response.json()
-    console.log(resp)
     return resp;
   }
 
