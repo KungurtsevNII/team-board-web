@@ -41,7 +41,6 @@ export const BoardProvider = ({ children }: { children: ReactNode }) => {
 
     const addColumn = useCallback(async (column: ColumnRequest) => {
         setLoading(true);
-        console.log(activeBoardId)
         try {
             const resp = await dataService.createColumn(activeBoardId, column);
             setColumns(prev => [...prev, resp]);
@@ -76,7 +75,7 @@ export const BoardProvider = ({ children }: { children: ReactNode }) => {
             setColumns(prev => prev.filter(t => t.id !== columnId));
         } catch (e) {
             const error = e as Error;
-            console.log(error.message);
+            console.error(error.message);
             if (error.message === "Not empty"){
                 setError('Колонка не пустая');
                 return

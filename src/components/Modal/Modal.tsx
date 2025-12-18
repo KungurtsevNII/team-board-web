@@ -7,9 +7,10 @@ interface ModalProps {
     children: React.ReactNode;
     title?: string;
     iconPath?: string;
+    className?: string;
 }
 
-export const Modal = ({ isOpen, onClose, children, title, iconPath }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, children, title, iconPath, className }: ModalProps) => {
     const modalRef = useRef<HTMLDivElement>(null);
 
     // Закрытие при нажатии Escape
@@ -48,7 +49,7 @@ export const Modal = ({ isOpen, onClose, children, title, iconPath }: ModalProps
 
     return (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
-            <div className="modal-content" ref={modalRef}>
+            <div className={`modal-content ${className || ''}`} ref={modalRef}>
                 <div className="modal-header">
                     <img className="modal-icon"src={iconPath} alt="alt"/>
                     {title && <h2 className="modal-title">{title}</h2>}

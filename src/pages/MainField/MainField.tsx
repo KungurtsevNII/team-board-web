@@ -4,6 +4,7 @@ import { BoardRow } from "../../components/BoardRow/BoardRow"
 import { useCallback, useEffect, useState } from "react"
 
 import humanIcon from "/src/assets/human.png"
+import searchIcon from "/src/assets/search.png"
 
 import type {
     BoardRequest, Column, ColumnRequest, Task, TaskRequest, SearchTasksRequest
@@ -13,6 +14,7 @@ import { useTaskContext } from "../../utils/TaskProvider"
 import { useBoardContext } from "../../utils/BoardProvider"
 import { ErrorModal } from "../../components/ErrorModal/ErrorModal"
 import { ExternalForms } from "../../components/ExternalForms/ExternalForms"
+import { SearchModal } from "../../components/SearchModal/SearchModal";
 
 const useIsMobile = () => {
     const [isMobile, setIsMobile] = useState(
@@ -36,6 +38,7 @@ export const MainField = () => {
     const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
     const [userModalOpen, setUserModalOpen] = useState(false);
+    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
     const [loadingColumns, setLoadingColumns] = useState(true);
     const [loadingBoards, setLoadingBoards] = useState(true);
@@ -46,6 +49,7 @@ export const MainField = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("")
+    const [modalSearchQuery, setModalSearchQuery] = useState("")
     const [isSearchOpen, setIsSearchOpen] = useState(false)
 
     const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
@@ -78,26 +82,26 @@ export const MainField = () => {
         load()
     }, []);
 
-// MainField.tsx
+    // MainField.tsx
 
-useEffect(() => {
-    setIsSidebarOpen(false);
-    setLoadingColumns(true);
-    const load = async () => {
-        if (!pendingTaskId) {
-            taskCtx.setExpandedTaskId(null);
-        }
+    useEffect(() => {
+        setIsSidebarOpen(false);
+        setLoadingColumns(true);
+        const load = async () => {
+            if (!pendingTaskId) {
+                taskCtx.setExpandedTaskId(null);
+            }
 
-        const board = await boardCtx.fetchBoard();
-        if (board?.tasks) {
-            taskCtx.setTasks(board.tasks);
-        } else {
-            taskCtx.setTasks([]);
-        }
-        setLoadingColumns(false);
-    };
-    load();
-}, [boardCtx.activeBoardId]); 
+            const board = await boardCtx.fetchBoard();
+            if (board?.tasks) {
+                taskCtx.setTasks(board.tasks);
+            } else {
+                taskCtx.setTasks([]);
+            }
+            setLoadingColumns(false);
+        };
+        load();
+    }, [boardCtx.activeBoardId]);
 
 
     useEffect(() => {
@@ -121,16 +125,16 @@ useEffect(() => {
         taskCtx.moveTask(taskId, targetColumnId);
     }, []);
 
-const handleTaskDetails = useCallback((task: Task) => {
-    if (boardCtx.activeBoardId !== task.boardID) {
-        setLoadingColumns(true);
-        boardCtx.setActiveBoardId(task.boardID);
-        setPendingTaskId(task.id); 
-    } else {
-        taskCtx.setExpandedTaskId(task.id);
-        taskCtx.fetchTaskDetails(task.id);
-    }
-}, [boardCtx, taskCtx]);
+    const handleTaskDetails = useCallback((task: Task) => {
+        if (boardCtx.activeBoardId !== task.boardID) {
+            setLoadingColumns(true);
+            boardCtx.setActiveBoardId(task.boardID);
+            setPendingTaskId(task.id);
+        } else {
+            taskCtx.setExpandedTaskId(task.id);
+            taskCtx.fetchTaskDetails(task.id);
+        }
+    }, [boardCtx, taskCtx]);
 
 
     // Отслеживаем завершение загрузки
@@ -181,29 +185,10 @@ const handleTaskDetails = useCallback((task: Task) => {
             return;
         }
 
-        console.log('Creating task:', taskData);
         taskCtx.addTask(taskData);
         setIsTaskModalOpen(false);
         setTaskColumn(null); // ✅ Очищаем после создания
     }, [taskCtx]);
-
-    // const filteredTasks = useMemo(() => {
-    //     return taskCtx.tasks.filter(t => {
-    //         const sq = searchQuery.toLowerCase().trim();
-    //         if (!sq) return true;
-
-    //         if (sq[0] === "#") {
-    //             const tagQuery = sq.slice(1);
-    //             if (!tagQuery) return false;
-    //             return t.tags?.some(tag =>
-    //                 tag.toLowerCase() === tagQuery ||
-    //                 tag.toLowerCase().includes(tagQuery)
-    //             );
-    //         }
-
-    //         return t.title.toLowerCase().includes(sq);
-    //     });
-    // }, [taskCtx.tasks, searchQuery]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.toLowerCase().split(' ');
@@ -214,10 +199,29 @@ const handleTaskDetails = useCallback((task: Task) => {
             query: query,
             filters: { tags: tags.map(v => v.slice(1)) }
         }
-        console.log(req.query, req.filters?.tags);
         taskCtx.searchTasks(req)
         setIsSearchOpen(value.length > 0);
     }, []);
+
+    const handleModalSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.toLowerCase().split(' ');
+        const tags = value.filter(v => v[0] === "#");
+        const query = value.filter(v => v[0] !== "#").join(" ");
+        setModalSearchQuery(e.target.value);
+        const req: SearchTasksRequest = {
+            query: query,
+            filters: { tags: tags.map(v => v.slice(1)) }
+        }
+        taskCtx.searchTasks(req)
+    }, []);
+
+    const handleOpenSearchModal = useCallback(() => {
+        setIsSearchModalOpen(true);
+        setModalSearchQuery(searchQuery);
+        setIsSearchOpen(false); // Close the dropdown
+        // Optionally clear the main input
+        setSearchQuery("");
+    }, [searchQuery]);
 
     const handleOnCloseErrorModal = useCallback(() => {
         setIsErrorModalOpen(false);
@@ -265,27 +269,41 @@ const handleTaskDetails = useCallback((task: Task) => {
                 <div className="main-field__right">
                     <div className="main-field__header">
                         <div className="main-field__header-right">
-                            {isMobile && (
-                                <button
-                                    className="choose-field__toggle"
-                                    onClick={toggleSidebar}
-                                >
-                                    ☰
-                                </button>
-                            )}
-                            <div className="search-wrapper">
-                                <input //FIXME на телефоне на имя заезжает
+                            {isMobile 
+                            ? (
+                                <div className="mobile-header">
+                                    <button
+                                        className="choose-field__toggle"
+                                        onClick={toggleSidebar}
+                                    >
+                                        ☰
+                                    </button>
+                                    <img onClick={handleOpenSearchModal} className="search-input-button__mobile" src={searchIcon} alt="s" />
+                                </div>
+                            )
+                            :<div className="search-wrapper">
+                                <input
                                     className="search-input"
                                     type="text"
                                     placeholder="Поиск задач"
                                     value={searchQuery}
                                     onChange={handleSearchChange}
-                                    onBlur={() => setTimeout(() => setIsSearchOpen(false), 150)}
+                                    onBlur={() => {
+                                        if (!isSearchModalOpen) {
+                                            setTimeout(() => setIsSearchOpen(false), 150);
+                                        }
+                                    }}
                                     onFocus={() => searchQuery && setIsSearchOpen(true)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && searchQuery.trim()) {
+                                            handleOpenSearchModal();
+                                        }
+                                    }}
                                 />
+                                <img onClick={handleOpenSearchModal} className="search-input__button" src={searchIcon} alt="s" />
                                 {isSearchOpen && taskCtx.searchedTasks.length > 0 && (
                                     <div className="search-dropdown">
-                                        {taskCtx.searchedTasks.slice(0, 10).map((task) => (
+                                        {taskCtx.searchedTasks.map((task) => (
                                             <div
                                                 key={task.id}
                                                 className="search-item"
@@ -295,26 +313,18 @@ const handleTaskDetails = useCallback((task: Task) => {
                                                 }}
                                             >
                                                 <div className="search-item-title">{task.title}</div>
-                                                {/* TODO заполнить данные как-то, просто с бека мало приходит */}
-                                                {/* <div className="search-item-meta">
-                                                    {boardCtx.board?.shortName == null
-                                                        ? boardCtx.board?.shortName
-                                                        : boardCtx.board?.name} #{
-                                                        taskCtx.tasks.find(t => t.id === task.id)?.number
-                                                    } · {
-                                                        boardCtx.columns.find(c => c.id === task.columnID)?.name}
-                                                </div> */}
                                                 <div className="search-item-meta">
-                                                    №{task.number}
+                                                    {task.boardShortName == null
+                                                        ? task.boardName
+                                                        : task.boardShortName} #{
+                                                        task.number
+                                                    }
                                                 </div>
                                             </div>
                                         ))}
-                                        {taskCtx.searchedTasks.length > 10 && (
-                                            <div className="search-more">Show all ({taskCtx.searchedTasks.length})</div>
-                                        )}
                                     </div>
                                 )}
-                            </div>
+                            </div>}
                         </div>
                         <div className="user-data" onClick={() => setUserModalOpen(true)}>
                             <div className="user-data__name">Владимир</div>
@@ -373,6 +383,14 @@ const handleTaskDetails = useCallback((task: Task) => {
 
                     userModalOpen={userModalOpen}
                     onCloseUserModal={() => setUserModalOpen(false)}
+                />
+
+                <SearchModal
+                    isOpen={isSearchModalOpen}
+                    onClose={() => setIsSearchModalOpen(false)}
+                    searchQuery={modalSearchQuery}
+                    onSearchChange={handleModalSearchChange}
+                    onTaskSelect={handleTaskDetails}
                 />
 
                 {
